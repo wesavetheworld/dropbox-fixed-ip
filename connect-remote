@@ -1,0 +1,138 @@
+#!/bin/bash
+#
+# connect.sh --- Connect to Remote Machine
+#            outside local network using Dropbox Public
+#            folder as to track the computer current IP
+#
+#  The dropbox file format must be:
+#
+#  for example: ( without comments)
+#
+#   track_ip
+#   ---------------
+#    177.17.98.155              # Remote   IP
+#    192.168.1.2 192.168.1.4    # Internal IP
+#
+#----------------------------------------------------------
+
+
+#------------ S E T T I N G S ----------------------------#
+#
+
+# Default ssh user 
+#
+USER="mrdummy"
+#
+# SSH Port to connect to folder
+#
+PORT=5931
+#
+# Dropbox file in pulich folder which the IP is stored
+# Get the public URL from this file
+track_url="https://dl.dropboxusercontent.com/u/811567/ip_machine_home"
+
+
+# Browser to access the http service if exist
+BROWSER=firefox
+
+# ------------ C O R E ---------------------------------#
+
+
+IPTRACK=/tmp/last_ip
+
+if [ $# -eq 0 ]
+  then
+    echo "
+     connect.sh
+     ------------------------------------
+     Connect to remote without fix IP using
+     Dropbox to store computer IP.
+
+     Edit this file to your settings.
+     
+     connect.sh  <argument>
+
+   [arguments]
+
+    update      Get new a IP if the current IP is not working
+
+
+    ssh         Connect through ssh  to host
+    sftp        Connect through sftp to host
+    sshfs
+
+    http1       Connect to http server1
+    http2       Connect to http server2
+
+    tunnel      Use tunneling
+
+    router      Access the router configuration page
+
+	"
+    exit 0
+fi     
+
+
+
+
+
+if [ -f $IPTRACK ];
+then 
+    export IP=$(head -n 1 $IPTRACK )  #> /dev/null 2>&1
+    echo "IP=$IP"
+else
+    curl $track_url > $IPTRACK  
+fi
+
+case "$1" in
+
+    "update")
+        echo "Updating computer IP"
+        curl $track_url > $IPTRACK  
+
+        ;;
+    "ssh")
+        echo "Connecting to SSH $USER@$IP port $PORT"
+        ssh -p $PORT "$USER@$IP"
+
+        ;;
+    "sftp")
+        echo "Connecting to SFTP $USER@$IP port $PORT"
+        ssh -p $PORT "$USER@$IP"
+
+        ;;
+    "sshfs")
+        echo "Mounting remote computer ..."
+        mkdir -p ~/remote
+        sshfs -C -o Cipher=arcfour -p $PORT "$USER@$IP:/"  ~/remote 
+
+        ;;
+    "http1")
+        firefox "http://$IP:8787" # Connect to http port 8787/external --- internal port 8080
+                                  # Python bottle server
+       ;;
+
+    "http2")
+        firefox "http://$IP:8888" # Connect to http port 8787/external --- internal port 8080
+                                  # Apache server
+       ;;
+
+    "router")
+        ## Access the router 
+        ssh  -p $PORT   -NL  9000:192.168.1.1:80  $USER@$IP &
+        firefox "localhost:9000"
+
+        ;;
+    "scan")
+        ## Scan computer ports
+        sudo nmap $IP
+        
+
+        ;;
+    *)
+        echo "Error"
+        ;;
+esac          
+
+
+

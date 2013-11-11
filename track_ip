@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+#  This script monitors the IP of local machine
+# and sends it to the textfile in Dropbox public 
+# directory.
+#
+#---------------------------------------------------
+
+TRACK=~/Dropbox/Public/ip_machine_home
+TRACK2=$TRACK".html"
+HTML_PORT=8888				# HTML port opened in the router
+HTML_PORT2=8787
+
+# Update IP in 15 Minutes  
+PERIOD=900   # 900=15*60 seconds
+
+rm -rf  $TRACK  $TRACK2
+touch $TRACK
+touch $TRACK2
+
+
+echo "Take the puburl :"$(dropbox puburl  $TRACK)
+echo "Take the puburl :"$(dropbox puburl  $TRACK2)
+
+echo "Starting IP tracking ...."
+sleep 10
+
+#exit 0
+
+
+
+while [ true ]; do
+ # do what you need to here
+# external_ip=$(curl http://ipecho.net/plain; echo)
+
+external_ip=$(curl -A 'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.1.4) Gecko/20091030 Gentoo Firefox/3.5.4' \
+	-s 'http://checkip.dyndns.org' | sed 's/.*Current IP Address: \([0-9\.]*\).*/\1/g' )
+
+internal_ip=$( ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' \
+	 | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' )
+
+
+ echo "External IP= $external_ip "
+ echo $external_ip > 	$TRACK
+ echo $internal_ip >>   $TRACK
+ 
+ADDRESS="http://$external_ip:$HTML_PORT"
+ADDRESS2="http://$external_ip:$HTML_PORT2"
+
+echo $ADDRESS
+echo $ADDRESS2
+
+echo "ADDRESS "$ADDRESS
+#HTML="<a href=\"$ADDRESS\">Remote Machine</a><script type="text/javascript"> window.location="http://$ADRESS"; </script>" 
+HTML="<a href=\"$ADDRESS\">Remote Machine Server1</a> <br /> <a href=\"$ADDRESS2\">Remote Machine Server2</a> <br />External IP: $external_ip <br /> Internal IP: $internal_ip"; 
+
+ echo $HTML > $TRACK2
+
+ cat $TRACK
+
+ cat $TRACK2
+
+sleep $PERIOD
+ 
+
+done
+    
+
